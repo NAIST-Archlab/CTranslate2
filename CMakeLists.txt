@@ -21,6 +21,7 @@ option(BUILD_CLI "Compile the clients" ON)
 option(BUILD_TESTS "Compile the tests" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(WITH_TENSOR_PARALLEL "Compile with NCCL and MPI backend" OFF)
+option(WITH_IMAX, "Compile with IMAX backend" OFF)
 
 if(ENABLE_PROFILING)
   message(STATUS "Enable profiling support")
@@ -656,6 +657,28 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY
 set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY
   COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION
 )
+
+# WIP: IMAX backend Compile
+if (WITH_IMAX)
+  add_definitions(-DCT2_WITH_IMAX)
+  set(CT2_IMAX_SOURCES ../conv-c2d/emax7.h ../conv-c2d/emax7lib.h ../conv-c2d/emax7lib.h ../conv-c2d/emax7lib.c)
+  set(CT2_IMAX_SOURCES ${CT2_IMAX_SOURCES} ggml-imax.c ggml-imax.h ggml-imax-kernels.h ggml-imax-kernels-cpu.c)
+  if (CT2_IMAX_NC)
+    set(CT2_IMAX_SOURCES ${CT2_IMAX_SOURCES} ggml-imax-kernels.c)
+  else()
+    add_custom_command(
+        OUTPUT ggml-imax-kernels-emax7.c
+        DEPENDS ggml-imax-kernels.c
+        COMMAND ${CMAKE_SOURCE_DIR}/third_party/conv-mark/conv-mark ${CMAKE_SOURCE_DIR}/src/ggml-imax-kernels.c > ggml-imax-kernels.c-mark.c
+        COMMAND cpp -P -DCT2_WITH_IMAX -DEMAX7 -DARMZYNQ -DFPDDMA -I${CMAKE_SOURCE_DIR}/include/ggml -I${CMAKE_SOURCE_DIR}/src/conv-c2d -I${CMAKE_SOURCE_DIR}/src ggml-imax-kernels.c-mark.c > ggml-imax-kernels.c-cppo.c
+        COMMAND ${CMAKE_SOURCE_DIR}/third_party/conv-c2d/conv-c2d ggml-imax-kernels.c-cppo.c
+    )
+    add_custom_target(CT2_IMAX_KERNEL_GEN DEPENDS ggml-imax-kernels-emax7.c)
+    target_sources(CT2_IMAX_KERNEL_GEN PRIVATE ggml-imax-kernels-emax7.c)
+    set(CT2_IMAX_SOURCES ${GGML_IMAX_SOURCES} ggml-imax-kernels-emax7.c)
+  endif()
+  set(CT2_EXTRA_FLAGS ${CT2_EXTRA_FLAGS} -DCT2_WITH_IMAX -DEMAX7 -DARMZYNQ -DFPDDMA)
+endif()
 
 list(APPEND LIBRARIES ${CMAKE_DL_LIBS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBRARIES})

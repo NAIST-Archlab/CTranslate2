@@ -19,3 +19,9 @@
 [submodule "third_party/cutlass"]
 	path = third_party/cutlass
 	url = https://github.com/NVIDIA/cutlass.git
+[submodule "third_party/conv-c2d"]
+	path = third_party/conv-c2d
+	url = https://github.com/NAIST-Archlab/conv-c2d.git
+[submodule "third_party/conv-mark"]
+	path = third_party/conv-mark
+	url = https://github.com/NAIST-Archlab/conv-mark.git
